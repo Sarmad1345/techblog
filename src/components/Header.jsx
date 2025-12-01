@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { blogPosts } from '../data/blogData';
+import { getBlogPosts } from '../data/blogData';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -12,11 +12,11 @@ const Header = () => {
   const dropdownRef = useRef(null);
 
   const navLinks = [
-    { name: 'Home', path: '/' },
-    { name: 'Blog', path: '/blog' },
-    { name: 'About Me', path: '/about' },
-    { name: 'Categories', path: '/categories' },
-    { name: 'Content', path: '/content' },
+    { name: 'Home' },
+    { name: 'Blog' },
+    { name: 'About Me' },
+    { name: 'Categories' },
+    { name: 'Content' },
   ];
 
   // Check if we're on home page
@@ -32,9 +32,14 @@ const Header = () => {
     
     // Navigate to home if Home is clicked
     if (linkName === 'Home') {
+      // Always navigate to home and scroll to top
       window.dispatchEvent(new CustomEvent('navigate', { 
         detail: { page: 'home' } 
       }));
+      // Force scroll to top after navigation
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 250);
     }
   };
 
@@ -70,7 +75,8 @@ const Header = () => {
     }
 
     const searchTerm = query.toLowerCase().trim();
-    const results = blogPosts.filter(post => {
+    const allPosts = getBlogPosts();
+    const results = allPosts.filter(post => {
       const titleMatch = post.title.toLowerCase().includes(searchTerm);
       const excerptMatch = post.excerpt.toLowerCase().includes(searchTerm);
       const categoryMatch = post.category.toLowerCase().includes(searchTerm);
@@ -151,10 +157,14 @@ const Header = () => {
           <button
             onClick={(e) => {
               e.preventDefault();
+              handleLinkClick('Home', e);
               window.dispatchEvent(new CustomEvent('navigate', { 
                 detail: { page: 'home' } 
               }));
-              handleLinkClick('Home', e);
+              // Force scroll to top
+              setTimeout(() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }, 250);
             }}
             className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 ease-in-out transform hover:scale-105 active:scale-95 flex-shrink-0 cursor-pointer"
           >
@@ -174,6 +184,10 @@ const Header = () => {
                     window.dispatchEvent(new CustomEvent('navigate', { 
                       detail: { page: 'home' } 
                     }));
+                    // Force scroll to top
+                    setTimeout(() => {
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }, 250);
                   } else if (link.name === 'Blog') {
                     handleSectionNavigation('blog');
                   } else if (link.name === 'Categories') {
@@ -486,6 +500,10 @@ const Header = () => {
                       window.dispatchEvent(new CustomEvent('navigate', { 
                         detail: { page: 'home' } 
                       }));
+                      // Force scroll to top
+                      setTimeout(() => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }, 250);
                     } else if (link.name === 'Blog') {
                       handleSectionNavigation('blog');
                     } else if (link.name === 'Categories') {

@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
+import { getAllCategories } from '../data/blogData';
 
-const AddBlogPage = ({ onBack, onPostAdded }) => {
+const AddBlogPage = ({ onBack }) => {
   const [formData, setFormData] = useState({
     title: '',
     excerpt: '',
     fullContent: '',
-    category: 'Web Development',
+    category: '',
     date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
     readTime: '5 min read',
     author: 'TechBlog Team',
@@ -17,18 +18,18 @@ const AddBlogPage = ({ onBack, onPostAdded }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [categories, setCategories] = useState([]);
 
-  const categories = [
-    'Web Development',
-    'AI & Machine Learning',
-    'Cloud Computing',
-    'Security',
-    'DevOps',
-    'Backend',
-    'Mobile Development',
-    'Database',
-    'Architecture'
-  ];
+  // Get categories from blogData
+  useEffect(() => {
+    const allCategories = getAllCategories();
+    const categoryNames = allCategories.map(cat => cat.name);
+    setCategories(categoryNames);
+    // Set default category if available
+    if (categoryNames.length > 0 && !formData.category) {
+      setFormData(prev => ({ ...prev, category: categoryNames[0] }));
+    }
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -92,7 +93,7 @@ const AddBlogPage = ({ onBack, onPostAdded }) => {
       title: '',
       excerpt: '',
       fullContent: '',
-      category: 'Web Development',
+      category: categories.length > 0 ? categories[0] : '',
       date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
       readTime: '5 min read',
       author: 'TechBlog Team',

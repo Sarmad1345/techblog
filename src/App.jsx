@@ -13,7 +13,6 @@ import BlogDetailPage from './components/BlogDetailPage'
 import CategoryPage from './components/CategoryPage'
 import SearchResultsPage from './components/SearchResultsPage'
 import AddBlogPage from './components/AddBlogPage'
-import './App.css'
 
 // Maintenance Page Component
 const MaintenancePage = () => {
@@ -100,12 +99,12 @@ function App() {
         setPageData({ id, category, query });
         setIsTransitioning(false);
         
-        // Scroll to top for detail pages, restore position for home
+        // Scroll to top for detail pages, scroll to top for home
         if (page === 'home') {
-          // Restore scroll position when returning to home
+          // Always scroll to top when going to home (don't restore position)
           setTimeout(() => {
-            window.scrollTo({ top: scrollPositionRef.current, behavior: 'auto' });
-          }, 50);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }, 100);
         } else {
           // Scroll to top instantly for detail pages (no smooth scroll)
           window.scrollTo({ top: 0, behavior: 'auto' });
@@ -243,7 +242,7 @@ function App() {
     }
 
     if (currentPage === 'add-blog') {
-      return <AddBlogPage onBack={handleBack} onPostAdded={() => setRefreshKey(prev => prev + 1)} />;
+      return <AddBlogPage onBack={handleBack} />;
     }
 
     // Normal website content (home page)
