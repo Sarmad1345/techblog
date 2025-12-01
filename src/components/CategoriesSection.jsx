@@ -75,7 +75,7 @@ const CategoriesSection = () => {
   ];
 
   return (
-    <section className="py-16 bg-white">
+    <section className="py-16 bg-white" data-section="categories">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Title */}
         <div className="text-center mb-12">
@@ -91,10 +91,14 @@ const CategoriesSection = () => {
         {/* Categories Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {categories.map((category) => (
-            <a
+            <button
               key={category.id}
-              href={`/categories/${category.name.toLowerCase().replace(/\s+/g, '-')}`}
-              className="group bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-blue-500 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('navigate', { 
+                  detail: { page: 'category', category: category.name.toLowerCase().replace(/\s+/g, '-') } 
+                }));
+              }}
+              className="group bg-white border-2 border-gray-200 rounded-xl p-6 hover:border-blue-500 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer w-full text-left"
             >
               <div className="flex items-start space-x-4">
                 {/* Category Icon */}
@@ -128,7 +132,7 @@ const CategoriesSection = () => {
                   </div>
                 </div>
               </div>
-            </a>
+            </button>
           ))}
         </div>
       </div>
@@ -137,4 +141,5 @@ const CategoriesSection = () => {
 };
 
 export default CategoriesSection;
+
 

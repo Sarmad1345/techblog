@@ -1,6 +1,22 @@
+import { useState, useEffect } from 'react'
+import { MAINTENANCE_MODE } from './config/maintenance'
+import Header from './components/Header'
+import HeroSection from './components/HeroSection'
+import FeaturedSection from './components/FeaturedSection'
+import BlogSection from './components/BlogSection'
+import CategoriesSection from './components/CategoriesSection'
+import AboutMe from './components/AboutMe'
+import ContentSection from './components/ContentSection'
+import CTASection from './components/CTASection'
+import Footer from './components/Footer'
+import BlogDetailPage from './components/BlogDetailPage'
+import CategoryPage from './components/CategoryPage'
+import SearchResultsPage from './components/SearchResultsPage'
+import AddBlogPage from './components/AddBlogPage'
 import './App.css'
 
-function App() {
+// Maintenance Page Component
+const MaintenancePage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center px-4">
       <div className="max-w-2xl w-full text-center">
@@ -48,6 +64,212 @@ function App() {
       </div>
     </div>
   )
+}
+
+function App() {
+  const [currentPage, setCurrentPage] = useState('home');
+  const [pageData, setPageData] = useState({});
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const scrollPositionRef = { current: 0 };
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Listen for new blog posts
+  useEffect(() => {
+    const handleBlogPostAdded = () => {
+      // Force re-render to show new posts
+      setRefreshKey(prev => prev + 1);
+    };
+
+    window.addEventListener('blogPostAdded', handleBlogPostAdded);
+    return () => {
+      window.removeEventListener('blogPostAdded', handleBlogPostAdded);
+    };
+  }, []);
+
+  // Handle navigation events
+  useEffect(() => {
+    let isNavigating = false;
+
+    const navigateToPage = (page, id, category, query) => {
+      if (isNavigating) return;
+      isNavigating = true;
+
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrentPage(page);
+        setPageData({ id, category, query });
+        setIsTransitioning(false);
+        
+        // Scroll to top for detail pages, restore position for home
+        if (page === 'home') {
+          // Restore scroll position when returning to home
+          setTimeout(() => {
+            window.scrollTo({ top: scrollPositionRef.current, behavior: 'auto' });
+          }, 50);
+        } else {
+          // Scroll to top instantly for detail pages (no smooth scroll)
+          window.scrollTo({ top: 0, behavior: 'auto' });
+        }
+        isNavigating = false;
+      }, 200);
+    };
+
+    const handleNavigate = (event) => {
+      const { page, id, category, query } = event.detail;
+      
+      // Save current scroll position before navigating away from home
+      if (currentPage === 'home') {
+        scrollPositionRef.current = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+      }
+      
+      // Set hash for browser history (without triggering hashchange)
+      const currentHash = window.location.hash;
+      let newHash = '';
+      
+      if (page === 'blog') {
+        newHash = `#/blog/${id}`;
+      } else if (page === 'category') {
+        newHash = `#/categories/${category}`;
+      } else if (page === 'search') {
+        newHash = `#/search?q=${encodeURIComponent(query)}`;
+      } else if (page === 'add-blog') {
+        newHash = `#/add-blog`;
+      }
+      
+      // Only update hash if it's different to prevent double navigation
+      if (currentHash !== newHash) {
+        window.history.pushState(null, '', newHash || window.location.pathname);
+      }
+      
+      navigateToPage(page, id, category, query);
+    };
+
+    // Handle hash changes (browser back/forward)
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      if (hash.startsWith('#/blog/')) {
+        const id = hash.split('/').pop();
+        // Save scroll position if on home before navigating
+        if (currentPage === 'home') {
+          scrollPositionRef.current = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+        }
+        navigateToPage('blog', parseInt(id), null, null);
+      } else if (hash.startsWith('#/categories/')) {
+        const category = hash.split('/').pop();
+        // Save scroll position if on home before navigating
+        if (currentPage === 'home') {
+          scrollPositionRef.current = window.scrollY || window.pageYOffset || document.documentElement.scrollTop;
+        }
+        navigateToPage('category', null, category, null);
+      } else if (hash.startsWith('#/search')) {
+        const urlParams = new URLSearchParams(hash.split('?')[1]);
+        const query = urlParams.get('q') || '';
+        navigateToPage('search', null, null, query);
+      } else if (hash.startsWith('#/add-blog')) {
+        navigateToPage('add-blog', null, null, null);
+      } else {
+        // Returning to home - restore scroll position
+        navigateToPage('home', null, null, null);
+      }
+    };
+
+    // Handle popstate (browser back/forward button)
+    const handlePopState = () => {
+      handleHashChange();
+    };
+
+    window.addEventListener('navigate', handleNavigate);
+    window.addEventListener('hashchange', handleHashChange);
+    window.addEventListener('popstate', handlePopState);
+    
+    // Check initial hash on mount
+    const hash = window.location.hash;
+    if (hash.startsWith('#/blog/')) {
+      const id = hash.split('/').pop();
+      setCurrentPage('blog');
+      setPageData({ id: parseInt(id) });
+    } else if (hash.startsWith('#/categories/')) {
+      const category = hash.split('/').pop();
+      setCurrentPage('category');
+      setPageData({ category });
+    } else if (hash.startsWith('#/search')) {
+      const urlParams = new URLSearchParams(hash.split('?')[1]);
+      const query = urlParams.get('q') || '';
+      setCurrentPage('search');
+      setPageData({ query });
+    } else if (hash.startsWith('#/add-blog')) {
+      setCurrentPage('add-blog');
+      setPageData({});
+    }
+
+    return () => {
+      window.removeEventListener('navigate', handleNavigate);
+      window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
+  const handleBack = () => {
+    window.history.pushState(null, '', window.location.pathname);
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentPage('home');
+      setPageData({});
+      setIsTransitioning(false);
+      // Restore scroll position when returning to home
+      setTimeout(() => {
+        window.scrollTo({ top: scrollPositionRef.current, behavior: 'auto' });
+      }, 50);
+    }, 200);
+  };
+
+  // Check if maintenance mode is enabled
+  if (MAINTENANCE_MODE) {
+    return <MaintenancePage />
+  }
+
+  // Render based on current page with smooth transitions
+  const renderPage = () => {
+    if (currentPage === 'blog') {
+      return <BlogDetailPage postId={pageData.id} onBack={handleBack} />;
+    }
+
+    if (currentPage === 'category') {
+      return <CategoryPage categoryName={pageData.category} onBack={handleBack} />;
+    }
+
+    if (currentPage === 'search') {
+      return <SearchResultsPage searchQuery={pageData.query || ''} onBack={handleBack} />;
+    }
+
+    if (currentPage === 'add-blog') {
+      return <AddBlogPage onBack={handleBack} onPostAdded={() => setRefreshKey(prev => prev + 1)} />;
+    }
+
+    // Normal website content (home page)
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <main>
+          {/* Main Content Area */}
+          <HeroSection />
+          <FeaturedSection />
+          <BlogSection />
+          <CategoriesSection />
+          <AboutMe />
+          <ContentSection />
+          <CTASection />
+        </main>
+        <Footer />
+      </div>
+    );
+  };
+
+  return (
+    <div className={`transition-opacity duration-200 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
+      {renderPage()}
+    </div>
+  );
 }
 
 export default App

@@ -1,83 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getBlogPosts } from '../data/blogData';
 
 const BlogSection = () => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [blogPosts, setBlogPosts] = useState([]);
   const postsPerPage = 6;
 
-  const blogPosts = [
-    {
-      id: 1,
-      title: "Getting Started with TypeScript: A Comprehensive Guide",
-      excerpt: "TypeScript brings static typing to JavaScript, making your code more robust and maintainable. Learn the fundamentals and best practices.",
-      date: "March 20, 2024",
-      category: "Web Development",
-      readTime: "10 min read"
-    },
-    {
-      id: 2,
-      title: "Docker Containerization: Simplifying Deployment",
-      excerpt: "Master Docker and containerization to streamline your development workflow. From basics to advanced orchestration techniques.",
-      date: "March 18, 2024",
-      category: "DevOps",
-      readTime: "12 min read"
-    },
-    {
-      id: 3,
-      title: "Building Responsive UIs with Tailwind CSS",
-      excerpt: "Create beautiful, responsive interfaces faster with Tailwind CSS. Discover utility-first CSS and modern design patterns.",
-      date: "March 16, 2024",
-      category: "Web Development",
-      readTime: "8 min read"
-    },
-    {
-      id: 4,
-      title: "Understanding GraphQL: The Modern API Query Language",
-      excerpt: "Explore GraphQL's powerful querying capabilities and how it compares to REST APIs. Build efficient data-fetching solutions.",
-      date: "March 14, 2024",
-      category: "Backend",
-      readTime: "9 min read"
-    },
-    {
-      id: 5,
-      title: "Mobile App Development: React Native vs Flutter",
-      excerpt: "Compare React Native and Flutter to choose the right framework for your next mobile project. Performance, ecosystem, and developer experience.",
-      date: "March 13, 2024",
-      category: "Mobile Development",
-      readTime: "11 min read"
-    },
-    {
-      id: 6,
-      title: "Database Design Best Practices for Scalable Applications",
-      excerpt: "Learn how to design databases that scale. From normalization to indexing strategies, optimize your data architecture.",
-      date: "March 11, 2024",
-      category: "Database",
-      readTime: "7 min read"
-    },
-    {
-      id: 7,
-      title: "Microservices Architecture: Patterns and Anti-patterns",
-      excerpt: "Navigate the complexities of microservices. Understand when to use them and how to avoid common pitfalls.",
-      date: "March 9, 2024",
-      category: "Architecture",
-      readTime: "14 min read"
-    },
-    {
-      id: 8,
-      title: "JavaScript Performance Optimization Techniques",
-      excerpt: "Boost your JavaScript application's performance with proven optimization strategies. From code splitting to lazy loading.",
-      date: "March 7, 2024",
-      category: "Web Development",
-      readTime: "6 min read"
-    },
-    {
-      id: 9,
-      title: "CI/CD Pipelines: Automating Your Deployment Process",
-      excerpt: "Set up continuous integration and deployment pipelines. Automate testing, building, and deploying your applications.",
-      date: "March 5, 2024",
-      category: "DevOps",
-      readTime: "9 min read"
-    }
-  ];
+  useEffect(() => {
+    const updatePosts = () => {
+      setBlogPosts(getBlogPosts());
+    };
+
+    updatePosts();
+    window.addEventListener('blogPostAdded', updatePosts);
+    return () => window.removeEventListener('blogPostAdded', updatePosts);
+  }, []);
 
   const totalPages = Math.ceil(blogPosts.length / postsPerPage);
   const startIndex = (currentPage - 1) * postsPerPage;
@@ -90,7 +27,7 @@ const BlogSection = () => {
   };
 
   return (
-    <section className="py-16 bg-gray-50">
+    <section className="py-16 bg-gray-50" data-section="blog">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Title */}
         <div className="text-center mb-12">
@@ -122,16 +59,23 @@ const BlogSection = () => {
                 </div>
               </div>
               <h3 className="text-2xl font-bold text-gray-800 mb-3 hover:text-blue-500 transition-colors duration-300">
-                <a href={`/blog/${post.id}`} className="hover:underline">
+                <button
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'blog', id: post.id } }));
+                  }}
+                  className="text-left hover:underline cursor-pointer w-full"
+                >
                   {post.title}
-                </a>
+                </button>
               </h3>
               <p className="text-gray-600 mb-4 leading-relaxed">
                 {post.excerpt}
               </p>
-              <a
-                href={`/blog/${post.id}`}
-                className="inline-flex items-center text-blue-500 font-semibold hover:text-blue-600 transition-colors duration-300 group"
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'blog', id: post.id } }));
+                }}
+                className="inline-flex items-center text-blue-500 font-semibold hover:text-blue-600 transition-colors duration-300 group cursor-pointer"
               >
                 Read More
                 <svg
@@ -147,7 +91,7 @@ const BlogSection = () => {
                     d="M9 5l7 7-7 7"
                   />
                 </svg>
-              </a>
+              </button>
             </article>
           ))}
         </div>
@@ -193,4 +137,5 @@ const BlogSection = () => {
 };
 
 export default BlogSection;
+
 

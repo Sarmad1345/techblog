@@ -24,14 +24,33 @@ const HeroSection = () => {
             Discover cutting-edge innovations and expert insights.
           </p>
 
-          {/* CTA Button */}
+          {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <button className="group relative bg-blue-500 text-white py-3 px-8 rounded-full hover:bg-blue-600 transition-all duration-300 font-semibold text-lg whitespace-nowrap transform hover:scale-110 hover:shadow-2xl active:scale-95 overflow-hidden">
+            {/* Start Reading Button - Scrolls to Latest Articles */}
+            <button 
+              onClick={() => {
+                const blogSection = document.querySelector('[data-section="blog"]');
+                if (blogSection) {
+                  blogSection.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              className="group relative bg-blue-500 text-white py-3 px-8 rounded-full hover:bg-blue-600 transition-all duration-300 font-semibold text-lg whitespace-nowrap transform hover:scale-110 hover:shadow-2xl active:scale-95 overflow-hidden cursor-pointer"
+            >
               <span className="relative z-10">Start Reading</span>
               {/* Shine effect on hover */}
               <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-30 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-all duration-700 ease-in-out"></span>
             </button>
-            <button className="group relative bg-transparent border-2 border-white text-white py-3 px-8 rounded-full hover:bg-white hover:text-gray-900 transition-all duration-300 font-semibold text-lg whitespace-nowrap transform hover:scale-110 active:scale-95">
+            
+            {/* Explore Now Button - Scrolls to Content Library */}
+            <button 
+              onClick={() => {
+                const contentSection = document.querySelector('[data-section="content"]');
+                if (contentSection) {
+                  contentSection.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              className="group relative bg-transparent border-2 border-white text-white py-3 px-8 rounded-full hover:bg-white hover:text-gray-900 transition-all duration-300 font-semibold text-lg whitespace-nowrap transform hover:scale-110 active:scale-95 cursor-pointer"
+            >
               <span className="relative z-10">Explore Now</span>
             </button>
           </div>
@@ -42,4 +61,6 @@ const HeroSection = () => {
 };
 
 export default HeroSection;
+
+
 

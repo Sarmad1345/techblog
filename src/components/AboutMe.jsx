@@ -11,7 +11,7 @@ const AboutMe = () => {
   ];
 
   return (
-    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50">
+    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-white to-gray-50" data-section="about">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-12">

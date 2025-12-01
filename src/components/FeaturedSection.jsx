@@ -1,42 +1,19 @@
+import { getBlogPosts } from '../data/blogData';
+import { useState, useEffect } from 'react';
+
 const FeaturedSection = () => {
-  const featuredPosts = [
-    {
-      id: 1,
-      title: "The Future of Artificial Intelligence in 2024",
-      excerpt: "Explore how AI is transforming industries and what to expect in the coming year. From machine learning to neural networks, discover the latest breakthroughs.",
-      image: "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=800&h=600&fit=crop",
-      category: "AI & Machine Learning",
-      date: "March 15, 2024",
-      readTime: "5 min read"
-    },
-    {
-      id: 2,
-      title: "Complete Guide to React 19: What's New?",
-      excerpt: "Dive deep into React 19's new features, including server components, improved hooks, and performance optimizations that will change how you build apps.",
-      image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&h=600&fit=crop",
-      category: "Web Development",
-      date: "March 12, 2024",
-      readTime: "8 min read"
-    },
-    {
-      id: 3,
-      title: "Cloud Computing Trends: AWS vs Azure vs GCP",
-      excerpt: "Compare the top cloud providers and understand which platform suits your needs. We break down pricing, features, and use cases for each.",
-      image: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&h=600&fit=crop",
-      category: "Cloud Computing",
-      date: "March 10, 2024",
-      readTime: "6 min read"
-    },
-    {
-      id: 4,
-      title: "Cybersecurity Best Practices for Developers",
-      excerpt: "Learn essential security practices every developer should know. From authentication to encryption, protect your applications from threats.",
-      image: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&h=600&fit=crop",
-      category: "Security",
-      date: "March 8, 2024",
-      readTime: "7 min read"
-    }
-  ];
+  const [featuredPosts, setFeaturedPosts] = useState([]);
+
+  useEffect(() => {
+    const updatePosts = () => {
+      const allPosts = getBlogPosts();
+      setFeaturedPosts(allPosts.slice(0, 4));
+    };
+
+    updatePosts();
+    window.addEventListener('blogPostAdded', updatePosts);
+    return () => window.removeEventListener('blogPostAdded', updatePosts);
+  }, []);
 
   return (
     <section className="py-16 bg-white">
@@ -82,16 +59,23 @@ const FeaturedSection = () => {
                   <span>{post.readTime}</span>
                 </div>
                 <h3 className="text-xl font-bold text-gray-800 mb-3 group-hover:text-blue-500 transition-colors duration-300 line-clamp-2">
-                  <a href={`/blog/${post.id}`} className="hover:underline">
+                  <button
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'blog', id: post.id } }));
+                    }}
+                    className="text-left hover:underline cursor-pointer w-full"
+                  >
                     {post.title}
-                  </a>
+                  </button>
                 </h3>
                 <p className="text-gray-600 mb-4 line-clamp-3 leading-relaxed">
                   {post.excerpt}
                 </p>
-                <a
-                  href={`/blog/${post.id}`}
-                  className="inline-flex items-center text-blue-500 font-semibold hover:text-blue-600 transition-colors duration-300 group/link"
+                <button
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'blog', id: post.id } }));
+                  }}
+                  className="inline-flex items-center text-blue-500 font-semibold hover:text-blue-600 transition-colors duration-300 group/link cursor-pointer"
                 >
                   Read More
                   <svg
@@ -107,7 +91,7 @@ const FeaturedSection = () => {
                       d="M9 5l7 7-7 7"
                     />
                   </svg>
-                </a>
+                </button>
               </div>
             </article>
           ))}
@@ -118,4 +102,5 @@ const FeaturedSection = () => {
 };
 
 export default FeaturedSection;
+
 
