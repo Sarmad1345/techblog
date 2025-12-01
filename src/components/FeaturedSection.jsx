@@ -1,24 +1,20 @@
-import { getBlogPosts } from '../data/blogData';
-import { useState, useEffect } from 'react';
+import { memo, useMemo } from 'react';
+import { useBlogStore } from '../stores/blogStore';
+import { useNavigationStore } from '../stores/navigationStore';
 
-const FeaturedSection = () => {
-  const [featuredPosts, setFeaturedPosts] = useState([]);
+const FeaturedSection = memo(() => {
+  const posts = useBlogStore((state) => state.posts);
+  const navigate = useNavigationStore((state) => state.navigate);
 
-  useEffect(() => {
-    const updatePosts = () => {
-      const allPosts = getBlogPosts();
-      setFeaturedPosts(allPosts.slice(0, 4));
-    };
+  const featuredPosts = useMemo(() => posts.slice(0, 4), [posts]);
 
-    updatePosts();
-    window.addEventListener('blogPostAdded', updatePosts);
-    return () => window.removeEventListener('blogPostAdded', updatePosts);
-  }, []);
+  const handlePostClick = (postId) => {
+    navigate('blog', { id: postId });
+  };
 
   return (
     <section className="py-16 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Title */}
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">
             Featured Posts
@@ -29,14 +25,12 @@ const FeaturedSection = () => {
           <div className="w-24 h-1 bg-blue-500 mx-auto mt-4"></div>
         </div>
 
-        {/* Featured Posts Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {featuredPosts.map((post) => (
             <article
               key={post.id}
               className="group bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
             >
-              {/* Post Image */}
               <div className="relative h-48 sm:h-56 overflow-hidden">
                 <img
                   src={post.image}
@@ -51,7 +45,6 @@ const FeaturedSection = () => {
                 </div>
               </div>
 
-              {/* Post Content */}
               <div className="p-6">
                 <div className="flex items-center text-sm text-gray-500 mb-3">
                   <span>{post.date}</span>
@@ -60,9 +53,7 @@ const FeaturedSection = () => {
                 </div>
                 <h3 className="text-xl font-bold text-gray-800 mb-3 group-hover:text-blue-500 transition-colors duration-300 line-clamp-2">
                   <button
-                    onClick={() => {
-                      window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'blog', id: post.id } }));
-                    }}
+                    onClick={() => handlePostClick(post.id)}
                     className="text-left hover:underline cursor-pointer w-full"
                   >
                     {post.title}
@@ -72,9 +63,7 @@ const FeaturedSection = () => {
                   {post.excerpt}
                 </p>
                 <button
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'blog', id: post.id } }));
-                  }}
+                  onClick={() => handlePostClick(post.id)}
                   className="inline-flex items-center text-blue-500 font-semibold hover:text-blue-600 transition-colors duration-300 group/link cursor-pointer"
                 >
                   Read More
@@ -99,8 +88,8 @@ const FeaturedSection = () => {
       </div>
     </section>
   );
-};
+});
+
+FeaturedSection.displayName = 'FeaturedSection';
 
 export default FeaturedSection;
-
-

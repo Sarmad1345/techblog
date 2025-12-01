@@ -1,37 +1,20 @@
-import { getBlogPosts } from '../data/blogData';
+import { memo, useMemo } from 'react';
+import { useBlogStore } from '../stores/blogStore';
+import { useNavigationStore } from '../stores/navigationStore';
 import Header from './Header';
 import Footer from './Footer';
-import { useState, useEffect } from 'react';
 
-const SearchResultsPage = ({ searchQuery, onBack }) => {
-  const [blogPosts, setBlogPosts] = useState([]);
+const SearchResultsPage = memo(({ searchQuery, onBack }) => {
+  const searchPosts = useBlogStore((state) => state.searchPosts);
+  const navigate = useNavigationStore((state) => state.navigate);
 
-  useEffect(() => {
-    const updatePosts = () => {
-      setBlogPosts(getBlogPosts());
-    };
+  const results = useMemo(() => {
+    return searchPosts(searchQuery);
+  }, [searchQuery, searchPosts]);
 
-    updatePosts();
-    window.addEventListener('blogPostAdded', updatePosts);
-    return () => window.removeEventListener('blogPostAdded', updatePosts);
-  }, []);
-
-  // Search through posts
-  const searchPosts = (query) => {
-    if (!query || query.trim() === '') return [];
-    
-    const searchTerm = query.toLowerCase().trim();
-    return blogPosts.filter(post => {
-      const titleMatch = post.title.toLowerCase().includes(searchTerm);
-      const excerptMatch = post.excerpt.toLowerCase().includes(searchTerm);
-      const categoryMatch = post.category.toLowerCase().includes(searchTerm);
-      const contentMatch = post.fullContent.toLowerCase().includes(searchTerm);
-      
-      return titleMatch || excerptMatch || categoryMatch || contentMatch;
-    });
+  const handlePostClick = (postId) => {
+    navigate('blog', { id: postId });
   };
-
-  const results = searchPosts(searchQuery);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -39,24 +22,13 @@ const SearchResultsPage = ({ searchQuery, onBack }) => {
       <main>
         <section className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Header */}
-            <div className="mb-12">
+            <div className="mb-8">
               <button
                 onClick={onBack}
                 className="inline-flex items-center text-blue-500 hover:text-blue-600 font-semibold mb-6 transition-colors"
               >
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
                 Back to Home
               </button>
@@ -64,93 +36,64 @@ const SearchResultsPage = ({ searchQuery, onBack }) => {
                 Search Results
               </h1>
               <p className="text-gray-600 text-lg">
-                {results.length > 0 
-                  ? `Found ${results.length} ${results.length === 1 ? 'article' : 'articles'} for "${searchQuery}"`
-                  : `No articles found for "${searchQuery}"`
-                }
+                {results.length} {results.length === 1 ? 'result' : 'results'} for "{searchQuery}"
               </p>
               <div className="w-24 h-1 bg-blue-500 mt-4"></div>
             </div>
 
-            {/* Search Results */}
-            {results.length > 0 ? (
+            {results.length === 0 ? (
+              <div className="text-center py-16">
+                <p className="text-gray-600 text-lg">No results found for "{searchQuery}".</p>
+                <p className="text-gray-500 mt-2">Try a different search term.</p>
+              </div>
+            ) : (
               <div className="space-y-6">
                 {results.map((post) => (
                   <article
                     key={post.id}
-                    className="bg-white border border-gray-200 rounded-lg p-6 sm:p-8 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+                    className="bg-white rounded-lg shadow-md p-6 sm:p-8 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                      <div className="flex items-center space-x-4 text-sm text-gray-500 mb-2 sm:mb-0">
-                        <span>{post.date}</span>
-                        <span>•</span>
-                        <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-semibold">
-                          {post.category}
-                        </span>
-                        <span>•</span>
-                        <span>{post.readTime}</span>
+                      <div className="flex items-center space-x-4 mb-3 sm:mb-0">
+                        <img
+                          src={post.image}
+                          alt={post.title}
+                          className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-lg"
+                        />
+                        <div className="flex-1">
+                          <span className="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-semibold mb-2">
+                            {post.category}
+                          </span>
+                          <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2 hover:text-blue-500 transition-colors">
+                            <button
+                              onClick={() => handlePostClick(post.id)}
+                              className="text-left hover:underline cursor-pointer"
+                            >
+                              {post.title}
+                            </button>
+                          </h3>
+                          <p className="text-gray-600 line-clamp-2 mb-3">{post.excerpt}</p>
+                          <div className="flex items-center text-sm text-gray-500">
+                            <span>{post.date}</span>
+                            <span className="mx-2">•</span>
+                            <span>{post.readTime}</span>
+                            <span className="mx-2">•</span>
+                            <span>{post.author}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-800 mb-3 hover:text-blue-500 transition-colors duration-300">
-                      <button
-                        onClick={() => {
-                          window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'blog', id: post.id } }));
-                        }}
-                        className="text-left hover:underline cursor-pointer w-full"
-                      >
-                        {post.title}
-                      </button>
-                    </h3>
-                    <p className="text-gray-600 mb-4 leading-relaxed">
-                      {post.excerpt}
-                    </p>
                     <button
-                      onClick={() => {
-                        window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'blog', id: post.id } }));
-                      }}
-                      className="inline-flex items-center text-blue-500 font-semibold hover:text-blue-600 transition-colors duration-300 group cursor-pointer"
+                      onClick={() => handlePostClick(post.id)}
+                      className="inline-flex items-center text-blue-500 font-semibold hover:text-blue-600 transition-colors"
                     >
                       Read More
-                      <svg
-                        className="w-5 h-5 ml-2 transform group-hover:translate-x-1 transition-transform duration-300"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
+                      <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
                     </button>
                   </article>
                 ))}
-              </div>
-            ) : (
-              <div className="text-center py-16">
-                <svg
-                  className="w-24 h-24 mx-auto text-gray-300 mb-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-                <p className="text-gray-600 text-lg mb-4">No articles found matching your search.</p>
-                <p className="text-gray-500 text-sm mb-8">Try different keywords or browse our categories.</p>
-                <button
-                  onClick={onBack}
-                  className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                >
-                  Back to Home
-                </button>
               </div>
             )}
           </div>
@@ -159,7 +102,8 @@ const SearchResultsPage = ({ searchQuery, onBack }) => {
       <Footer />
     </div>
   );
-};
+});
+
+SearchResultsPage.displayName = 'SearchResultsPage';
 
 export default SearchResultsPage;
-

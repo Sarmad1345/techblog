@@ -1,29 +1,22 @@
-import { useState, useMemo, useEffect } from 'react';
-import { getBlogPosts, getAllCategories } from '../data/blogData';
+import { memo, useState, useMemo } from 'react';
+import { useBlogStore } from '../stores/blogStore';
+import { useNavigationStore } from '../stores/navigationStore';
 
-const ContentSection = () => {
-  const [blogPosts, setBlogPosts] = useState([]);
+const ContentSection = memo(() => {
+  const posts = useBlogStore((state) => state.posts);
+  const getAllCategories = useBlogStore((state) => state.getAllCategories);
+  const navigate = useNavigationStore((state) => state.navigate);
+  
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('newest');
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const [viewMode, setViewMode] = useState('grid');
   const [readTimeFilter, setReadTimeFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    const updatePosts = () => {
-      setBlogPosts(getBlogPosts());
-    };
+  const categories = useMemo(() => ['All', ...getAllCategories().map(cat => cat.name)], [getAllCategories]);
 
-    updatePosts();
-    window.addEventListener('blogPostAdded', updatePosts);
-    return () => window.removeEventListener('blogPostAdded', updatePosts);
-  }, []);
-
-  const categories = ['All', ...getAllCategories().map(cat => cat.name)];
-
-  // Filter and sort posts
   const filteredAndSortedPosts = useMemo(() => {
-    let filtered = [...blogPosts];
+    let filtered = [...posts];
 
     // Search filter
     if (searchQuery.trim()) {
@@ -51,7 +44,7 @@ const ContentSection = () => {
       });
     }
 
-    // Sorting
+    // Sort
     filtered.sort((a, b) => {
       if (sortBy === 'newest') {
         return new Date(b.date) - new Date(a.date);
@@ -64,58 +57,42 @@ const ContentSection = () => {
     });
 
     return filtered;
-  }, [selectedCategory, sortBy, readTimeFilter, searchQuery]);
+  }, [posts, selectedCategory, sortBy, readTimeFilter, searchQuery]);
 
   const handlePostClick = (postId) => {
-    window.dispatchEvent(new CustomEvent('navigate', { 
-      detail: { page: 'blog', id: postId } 
-    }));
+    navigate('blog', { id: postId });
   };
 
   return (
     <section className="py-16 bg-gray-50" data-section="content">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">
             Content Library
           </h2>
           <p className="text-gray-600 text-lg max-w-2xl mx-auto">
-            Explore our complete collection of articles, tutorials, and resources
+            Browse all articles with advanced filtering and sorting
           </p>
           <div className="w-24 h-1 bg-blue-500 mx-auto mt-4"></div>
         </div>
 
         {/* Filters and Controls */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          {/* Search Bar */}
-          <div className="mb-6">
-            <div className="relative">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Search */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Search
+              </label>
               <input
                 type="text"
-                placeholder="Search content..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-3 pl-12 pr-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                placeholder="Search articles..."
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <svg
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
             </div>
-          </div>
 
-          {/* Filters Row */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
             {/* Category Filter */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -124,27 +101,11 @@ const ContentSection = () => {
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 {categories.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
-              </select>
-            </div>
-
-            {/* Sort By */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Sort By
-              </label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-                <option value="alphabetical">Alphabetical</option>
               </select>
             </div>
 
@@ -156,7 +117,7 @@ const ContentSection = () => {
               <select
                 value={readTimeFilter}
                 onChange={(e) => setReadTimeFilter(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="All">All</option>
                 <option value="Quick">Quick (≤5 min)</option>
@@ -195,156 +156,133 @@ const ContentSection = () => {
             </div>
           </div>
 
-          {/* Results Count */}
-          <div className="text-sm text-gray-600">
-            Showing <span className="font-semibold text-blue-600">{filteredAndSortedPosts.length}</span> {filteredAndSortedPosts.length === 1 ? 'article' : 'articles'}
+          {/* Sort */}
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Sort By
+            </label>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="alphabetical">Alphabetical</option>
+            </select>
           </div>
         </div>
 
-        {/* Content Display */}
-        {filteredAndSortedPosts.length > 0 ? (
-          viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredAndSortedPosts.map((post) => (
-                <article
-                  key={post.id}
-                  onClick={() => handlePostClick(post.id)}
-                  className="group bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer"
-                >
-                  <div className="relative h-48 overflow-hidden">
-                    <img
-                      src={post.image}
-                      alt={post.title}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="absolute top-4 left-4">
-                      <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
-                        {post.category}
-                      </span>
-                    </div>
+        {/* Results Count */}
+        <div className="mb-6">
+          <p className="text-gray-600">
+            Showing {filteredAndSortedPosts.length} of {posts.length} articles
+          </p>
+        </div>
+
+        {/* Posts Display */}
+        {filteredAndSortedPosts.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-lg">
+            <p className="text-gray-600 text-lg">No articles found matching your criteria.</p>
+          </div>
+        ) : viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredAndSortedPosts.map((post) => (
+              <article
+                key={post.id}
+                className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
+              >
+                <div className="relative h-48 overflow-hidden">
+                  <img
+                    src={post.image}
+                    alt={post.title}
+                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                  />
+                  <div className="absolute top-4 left-4">
+                    <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                      {post.category}
+                    </span>
                   </div>
-                  <div className="p-6">
+                </div>
+                <div className="p-6">
+                  <div className="flex items-center text-sm text-gray-500 mb-3">
+                    <span>{post.date}</span>
+                    <span className="mx-2">•</span>
+                    <span>{post.readTime}</span>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-3 hover:text-blue-500 transition-colors">
+                    <button
+                      onClick={() => handlePostClick(post.id)}
+                      className="text-left hover:underline cursor-pointer w-full"
+                    >
+                      {post.title}
+                    </button>
+                  </h3>
+                  <p className="text-gray-600 mb-4 line-clamp-3">{post.excerpt}</p>
+                  <button
+                    onClick={() => handlePostClick(post.id)}
+                    className="inline-flex items-center text-blue-500 font-semibold hover:text-blue-600 transition-colors"
+                  >
+                    Read More
+                    <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {filteredAndSortedPosts.map((post) => (
+              <article
+                key={post.id}
+                className="bg-white rounded-lg shadow-md p-6 hover:shadow-xl transition-all duration-300"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
+                  <img
+                    src={post.image}
+                    alt={post.title}
+                    className="w-full sm:w-32 h-48 sm:h-32 object-cover rounded-lg"
+                  />
+                  <div className="flex-1">
+                    <span className="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-semibold mb-2">
+                      {post.category}
+                    </span>
+                    <h3 className="text-2xl font-bold text-gray-800 mb-2 hover:text-blue-500 transition-colors">
+                      <button
+                        onClick={() => handlePostClick(post.id)}
+                        className="text-left hover:underline cursor-pointer"
+                      >
+                        {post.title}
+                      </button>
+                    </h3>
+                    <p className="text-gray-600 mb-3">{post.excerpt}</p>
                     <div className="flex items-center text-sm text-gray-500 mb-3">
                       <span>{post.date}</span>
                       <span className="mx-2">•</span>
                       <span>{post.readTime}</span>
                     </div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-3 group-hover:text-blue-500 transition-colors duration-300 line-clamp-2">
-                      {post.title}
-                    </h3>
-                    <p className="text-gray-600 mb-4 line-clamp-3 leading-relaxed">
-                      {post.excerpt}
-                    </p>
-                    <div className="inline-flex items-center text-blue-500 font-semibold hover:text-blue-600 transition-colors duration-300 group/link">
+                    <button
+                      onClick={() => handlePostClick(post.id)}
+                      className="inline-flex items-center text-blue-500 font-semibold hover:text-blue-600 transition-colors"
+                    >
                       Read More
-                      <svg
-                        className="w-5 h-5 ml-2 transform group-hover/link:translate-x-1 transition-transform duration-300"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
+                      <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                       </svg>
-                    </div>
+                    </button>
                   </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {filteredAndSortedPosts.map((post) => (
-                <article
-                  key={post.id}
-                  onClick={() => handlePostClick(post.id)}
-                  className="group bg-white rounded-lg shadow-md p-6 sm:p-8 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                    <div className="flex items-center space-x-4 text-sm text-gray-500 mb-2 sm:mb-0">
-                      <span>{post.date}</span>
-                      <span>•</span>
-                      <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-semibold">
-                        {post.category}
-                      </span>
-                      <span>•</span>
-                      <span>{post.readTime}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-6">
-                    <div className="flex-shrink-0">
-                      <img
-                        src={post.image}
-                        alt={post.title}
-                        className="w-32 h-32 object-cover rounded-lg"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-gray-800 mb-3 group-hover:text-blue-500 transition-colors duration-300">
-                        {post.title}
-                      </h3>
-                      <p className="text-gray-600 mb-4 leading-relaxed">
-                        {post.excerpt}
-                      </p>
-                      <div className="inline-flex items-center text-blue-500 font-semibold hover:text-blue-600 transition-colors duration-300 group/link">
-                        Read More
-                        <svg
-                          className="w-5 h-5 ml-2 transform group-hover/link:translate-x-1 transition-transform duration-300"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 5l7 7-7 7"
-                          />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )
-        ) : (
-          <div className="text-center py-16 bg-white rounded-lg shadow-md">
-            <svg
-              className="w-24 h-24 mx-auto text-gray-300 mb-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">No content found</h3>
-            <p className="text-gray-600 mb-4">Try adjusting your filters or search query</p>
-            <button
-              onClick={() => {
-                setSelectedCategory('All');
-                setReadTimeFilter('All');
-                setSearchQuery('');
-              }}
-              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-            >
-              Clear Filters
-            </button>
+                </div>
+              </article>
+            ))}
           </div>
         )}
       </div>
     </section>
   );
-};
+});
+
+ContentSection.displayName = 'ContentSection';
 
 export default ContentSection;
-

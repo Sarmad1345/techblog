@@ -1,8 +1,11 @@
-import { getPostById } from '../data/blogData';
+import { memo } from 'react';
+import { useBlogStore } from '../stores/blogStore';
 import Header from './Header';
 import Footer from './Footer';
+import ShareButton from './ShareButton';
 
-const BlogDetailPage = ({ postId, onBack }) => {
+const BlogDetailPage = memo(({ postId, onBack }) => {
+  const getPostById = useBlogStore((state) => state.getPostById);
   const post = getPostById(postId);
 
   if (!post) {
@@ -24,7 +27,6 @@ const BlogDetailPage = ({ postId, onBack }) => {
     );
   }
 
-  // Convert markdown-like content to HTML (simple version)
   const formatContent = (content) => {
     const lines = content.split('\n');
     const elements = [];
@@ -33,10 +35,8 @@ const BlogDetailPage = ({ postId, onBack }) => {
     let codeBlockIndex = 0;
 
     lines.forEach((line, index) => {
-      // Handle code blocks
       if (line.startsWith('```')) {
         if (inCodeBlock) {
-          // End of code block
           elements.push(
             <pre key={`code-${codeBlockIndex}`} className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-4">
               <code>{codeBlockContent.join('\n')}</code>
@@ -46,7 +46,6 @@ const BlogDetailPage = ({ postId, onBack }) => {
           codeBlockIndex++;
           inCodeBlock = false;
         } else {
-          // Start of code block
           inCodeBlock = true;
         }
         return;
@@ -57,7 +56,6 @@ const BlogDetailPage = ({ postId, onBack }) => {
         return;
       }
 
-      // Headers
       if (line.startsWith('# ')) {
         elements.push(<h1 key={index} className="text-4xl font-bold mt-8 mb-4 text-gray-900">{line.substring(2)}</h1>);
         return;
@@ -71,7 +69,6 @@ const BlogDetailPage = ({ postId, onBack }) => {
         return;
       }
 
-      // Bold text
       if (line.includes('**')) {
         const parts = line.split('**');
         elements.push(
@@ -82,20 +79,12 @@ const BlogDetailPage = ({ postId, onBack }) => {
         return;
       }
 
-      // Regular paragraphs
       if (line.trim()) {
         elements.push(<p key={index} className="mb-4 text-gray-700 leading-relaxed">{line}</p>);
         return;
       }
-
-      // Empty lines
-      if (!line.trim() && elements.length > 0) {
-        // Don't add extra breaks
-        return;
-      }
     });
 
-    // Handle code block that wasn't closed
     if (inCodeBlock && codeBlockContent.length > 0) {
       elements.push(
         <pre key={`code-${codeBlockIndex}`} className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-4">
@@ -111,7 +100,6 @@ const BlogDetailPage = ({ postId, onBack }) => {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <main>
-        {/* Hero Image */}
         <div className="relative h-64 md:h-96 overflow-hidden bg-gray-900">
           <img
             src={post.image}
@@ -136,15 +124,21 @@ const BlogDetailPage = ({ postId, onBack }) => {
           </div>
         </div>
 
-        {/* Article Content */}
         <article className="max-w-4xl mx-auto px-4 py-12">
           <div className="bg-white rounded-lg shadow-lg p-8 md:p-12">
             <div className="prose prose-lg max-w-none">
               {formatContent(post.fullContent)}
             </div>
 
-            {/* Back Button */}
             <div className="mt-12 pt-8 border-t border-gray-200">
+              <ShareButton 
+                title={post.title}
+                url={`${window.location.origin}${window.location.pathname}#/blog/${postId}`}
+                description={`Check out this article: ${post.title}`}
+              />
+            </div>
+
+            <div className="mt-8 pt-8 border-t border-gray-200">
               <button
                 onClick={onBack}
                 className="inline-flex items-center text-blue-500 hover:text-blue-600 font-semibold transition-colors"
@@ -171,7 +165,8 @@ const BlogDetailPage = ({ postId, onBack }) => {
       <Footer />
     </div>
   );
-};
+});
+
+BlogDetailPage.displayName = 'BlogDetailPage';
 
 export default BlogDetailPage;
-

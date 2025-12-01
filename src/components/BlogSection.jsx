@@ -1,35 +1,32 @@
-import { useState, useEffect } from 'react';
-import { getBlogPosts } from '../data/blogData';
+import { memo, useState, useMemo } from 'react';
+import { useBlogStore } from '../stores/blogStore';
+import { useNavigationStore } from '../stores/navigationStore';
 
-const BlogSection = () => {
+const BlogSection = memo(() => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [blogPosts, setBlogPosts] = useState([]);
   const postsPerPage = 6;
+  const posts = useBlogStore((state) => state.posts);
+  const navigate = useNavigationStore((state) => state.navigate);
 
-  useEffect(() => {
-    const updatePosts = () => {
-      setBlogPosts(getBlogPosts());
-    };
-
-    updatePosts();
-    window.addEventListener('blogPostAdded', updatePosts);
-    return () => window.removeEventListener('blogPostAdded', updatePosts);
-  }, []);
-
-  const totalPages = Math.ceil(blogPosts.length / postsPerPage);
-  const startIndex = (currentPage - 1) * postsPerPage;
-  const endIndex = startIndex + postsPerPage;
-  const currentPosts = blogPosts.slice(startIndex, endIndex);
+  const totalPages = useMemo(() => Math.ceil(posts.length / postsPerPage), [posts.length, postsPerPage]);
+  const currentPosts = useMemo(() => {
+    const startIndex = (currentPage - 1) * postsPerPage;
+    const endIndex = startIndex + postsPerPage;
+    return posts.slice(startIndex, endIndex);
+  }, [posts, currentPage, postsPerPage]);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handlePostClick = (postId) => {
+    navigate('blog', { id: postId });
+  };
+
   return (
     <section className="py-16 bg-gray-50" data-section="blog">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Section Title */}
         <div className="text-center mb-12">
           <h2 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">
             Latest Articles
@@ -40,7 +37,6 @@ const BlogSection = () => {
           <div className="w-24 h-1 bg-blue-500 mx-auto mt-4"></div>
         </div>
 
-        {/* Blog Posts List */}
         <div className="space-y-6 mb-12">
           {currentPosts.map((post) => (
             <article
@@ -48,84 +44,74 @@ const BlogSection = () => {
               className="bg-white rounded-lg shadow-md p-6 sm:p-8 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
             >
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                <div className="flex items-center space-x-4 text-sm text-gray-500 mb-2 sm:mb-0">
-                  <span>{post.date}</span>
-                  <span>•</span>
-                  <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-semibold">
-                    {post.category}
-                  </span>
-                  <span>•</span>
-                  <span>{post.readTime}</span>
+                <div className="flex items-center space-x-4 mb-3 sm:mb-0">
+                  <img
+                    src={post.image}
+                    alt={post.title}
+                    className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-lg"
+                  />
+                  <div className="flex-1">
+                    <span className="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-semibold mb-2">
+                      {post.category}
+                    </span>
+                    <h3 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2 hover:text-blue-500 transition-colors">
+                      <button
+                        onClick={() => handlePostClick(post.id)}
+                        className="text-left hover:underline cursor-pointer"
+                      >
+                        {post.title}
+                      </button>
+                    </h3>
+                    <p className="text-gray-600 line-clamp-2 mb-3">{post.excerpt}</p>
+                    <div className="flex items-center text-sm text-gray-500">
+                      <span>{post.date}</span>
+                      <span className="mx-2">•</span>
+                      <span>{post.readTime}</span>
+                      <span className="mx-2">•</span>
+                      <span>{post.author}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-3 hover:text-blue-500 transition-colors duration-300">
-                <button
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'blog', id: post.id } }));
-                  }}
-                  className="text-left hover:underline cursor-pointer w-full"
-                >
-                  {post.title}
-                </button>
-              </h3>
-              <p className="text-gray-600 mb-4 leading-relaxed">
-                {post.excerpt}
-              </p>
               <button
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('navigate', { detail: { page: 'blog', id: post.id } }));
-                }}
-                className="inline-flex items-center text-blue-500 font-semibold hover:text-blue-600 transition-colors duration-300 group cursor-pointer"
+                onClick={() => handlePostClick(post.id)}
+                className="inline-flex items-center text-blue-500 font-semibold hover:text-blue-600 transition-colors"
               >
                 Read More
-                <svg
-                  className="w-5 h-5 ml-2 transform group-hover:translate-x-1 transition-transform duration-300"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 5l7 7-7 7"
-                  />
+                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </button>
             </article>
           ))}
         </div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center space-x-2">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+              className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Previous
             </button>
-            {[...Array(totalPages)].map((_, index) => {
-              const page = index + 1;
-              return (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-4 py-2 rounded-lg border transition-colors duration-300 ${
-                    currentPage === page
-                      ? 'bg-blue-500 text-white border-blue-500'
-                      : 'border-gray-300 text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {page}
-                </button>
-              );
-            })}
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => handlePageChange(page)}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  currentPage === page
+                    ? 'bg-blue-500 text-white'
+                    : 'bg-white border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-300"
+              className="px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Next
             </button>
@@ -134,8 +120,8 @@ const BlogSection = () => {
       </div>
     </section>
   );
-};
+});
+
+BlogSection.displayName = 'BlogSection';
 
 export default BlogSection;
-
-

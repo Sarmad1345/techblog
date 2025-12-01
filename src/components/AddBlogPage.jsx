@@ -1,16 +1,18 @@
-import { useState, useEffect } from 'react';
+import { memo, useState, useEffect, useMemo } from 'react';
 import Header from './Header';
 import Footer from './Footer';
-import { getAllCategories } from '../data/blogData';
+import { useBlogStore } from '../stores/blogStore';
 
-const AddBlogPage = ({ onBack }) => {
+const AddBlogPage = memo(({ onBack }) => {
+  const addPost = useBlogStore((state) => state.addPost);
+  const getAllCategories = useBlogStore((state) => state.getAllCategories);
+  
   const [formData, setFormData] = useState({
     title: '',
     excerpt: '',
     fullContent: '',
     category: '',
-    date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-    readTime: '5 min read',
+    readTime: '',
     author: 'TechBlog Team',
     image: ''
   });
@@ -18,18 +20,14 @@ const AddBlogPage = ({ onBack }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [categories, setCategories] = useState([]);
 
-  // Get categories from blogData
+  const categories = useMemo(() => getAllCategories().map(cat => cat.name), [getAllCategories]);
+
   useEffect(() => {
-    const allCategories = getAllCategories();
-    const categoryNames = allCategories.map(cat => cat.name);
-    setCategories(categoryNames);
-    // Set default category if available
-    if (categoryNames.length > 0 && !formData.category) {
-      setFormData(prev => ({ ...prev, category: categoryNames[0] }));
+    if (categories.length > 0 && !formData.category) {
+      setFormData(prev => ({ ...prev, category: categories[0] }));
     }
-  }, []);
+  }, [categories, formData.category]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -45,7 +43,6 @@ const AddBlogPage = ({ onBack }) => {
     setErrorMessage('');
     setSuccessMessage('');
 
-    // Validation
     if (!formData.title.trim()) {
       setErrorMessage('Title is required');
       setIsSubmitting(false);
@@ -61,50 +58,47 @@ const AddBlogPage = ({ onBack }) => {
       setIsSubmitting(false);
       return;
     }
-
-    // Get existing posts from localStorage or use default
-    const existingPosts = JSON.parse(localStorage.getItem('customBlogPosts') || '[]');
-    
-    // Generate new ID
-    const newId = existingPosts.length > 0 
-      ? Math.max(...existingPosts.map(p => p.id)) + 1 
-      : 100; // Start from 100 to avoid conflicts with existing posts
+    if (!formData.category) {
+      setErrorMessage('Category is required');
+      setIsSubmitting(false);
+      return;
+    }
+    if (!formData.readTime) {
+      setErrorMessage('Read time is required');
+      setIsSubmitting(false);
+      return;
+    }
 
     const newPost = {
-      id: newId,
-      ...formData,
       title: formData.title.trim(),
       excerpt: formData.excerpt.trim(),
       fullContent: formData.fullContent.trim(),
+      category: formData.category,
+      readTime: `${formData.readTime} min read`,
+      author: formData.author || 'TechBlog Team',
       image: formData.image || 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&h=600&fit=crop'
     };
 
-    // Add to localStorage
-    existingPosts.push(newPost);
-    localStorage.setItem('customBlogPosts', JSON.stringify(existingPosts));
-
-    // Trigger custom event to reload posts
-    window.dispatchEvent(new CustomEvent('blogPostAdded', { detail: newPost }));
-
-    setSuccessMessage('Blog post added successfully!');
-    
-    // Reset form
-    setFormData({
-      title: '',
-      excerpt: '',
-      fullContent: '',
-      category: categories.length > 0 ? categories[0] : '',
-      date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-      readTime: '5 min read',
-      author: 'TechBlog Team',
-      image: ''
-    });
+    const success = addPost(newPost);
+    if (success) {
+      setSuccessMessage('Blog post added successfully!');
+      setFormData({
+        title: '',
+        excerpt: '',
+        fullContent: '',
+        category: categories.length > 0 ? categories[0] : '',
+        readTime: '',
+        author: 'TechBlog Team',
+        image: ''
+      });
+    } else {
+      setErrorMessage('Failed to add blog post. Please try again.');
+    }
 
     setIsSubmitting(false);
-
-    // Clear success message after 3 seconds
     setTimeout(() => {
       setSuccessMessage('');
+      setErrorMessage('');
     }, 3000);
   };
 
@@ -114,197 +108,148 @@ const AddBlogPage = ({ onBack }) => {
       <main>
         <section className="py-16 bg-white">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            {/* Header */}
-            <div className="mb-8">
+            <div className="mb-12">
               <button
                 onClick={onBack}
                 className="inline-flex items-center text-blue-500 hover:text-blue-600 font-semibold mb-6 transition-colors"
               >
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 19l-7-7 7-7"
-                  />
+                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
                 Back to Home
               </button>
-              <h1 className="text-4xl font-bold text-gray-800 mb-4">
-                Add New Blog Post
-              </h1>
-              <p className="text-gray-600">
-                Create and publish a new article to your blog
-              </p>
+              <h1 className="text-4xl font-bold text-gray-800 mb-4">Add New Blog Post</h1>
+              <p className="text-gray-600 text-lg">Fill out the form below to publish a new article.</p>
               <div className="w-24 h-1 bg-blue-500 mt-4"></div>
             </div>
 
-            {/* Success/Error Messages */}
-            {successMessage && (
-              <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800">
-                {successMessage}
-              </div>
-            )}
-            {errorMessage && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
-                {errorMessage}
-              </div>
-            )}
+            <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-8">
+              {successMessage && (
+                <div className="mb-4 p-3 rounded-lg bg-green-100 text-green-700">
+                  {successMessage}
+                </div>
+              )}
+              {errorMessage && (
+                <div className="mb-4 p-3 rounded-lg bg-red-100 text-red-700">
+                  {errorMessage}
+                </div>
+              )}
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg p-8">
-              {/* Title */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="title" className="block text-gray-700 text-sm font-bold mb-2">
                   Title <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
+                  id="title"
                   name="title"
                   value={formData.title}
                   onChange={handleChange}
+                  className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter blog post title"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
                   required
                 />
               </div>
 
-              {/* Excerpt */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="excerpt" className="block text-gray-700 text-sm font-bold mb-2">
                   Excerpt <span className="text-red-500">*</span>
                 </label>
                 <textarea
+                  id="excerpt"
                   name="excerpt"
                   value={formData.excerpt}
                   onChange={handleChange}
-                  placeholder="Write a brief description of your article"
                   rows="3"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 resize-none"
+                  className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-blue-500"
+                  placeholder="A short summary of your blog post"
                   required
-                />
+                ></textarea>
               </div>
 
-              {/* Full Content */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="fullContent" className="block text-gray-700 text-sm font-bold mb-2">
                   Full Content <span className="text-red-500">*</span>
                 </label>
                 <textarea
+                  id="fullContent"
                   name="fullContent"
                   value={formData.fullContent}
                   onChange={handleChange}
-                  placeholder="Write your full article content here. You can use markdown-like formatting: # for headings, ** for bold text, etc."
-                  rows="15"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 resize-none font-mono text-sm"
+                  rows="10"
+                  className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-blue-500"
+                  placeholder="Write your full blog post content here (supports basic markdown like # headings, **bold**, ```code```)"
                   required
-                />
-                <p className="text-xs text-gray-500 mt-2">
-                  Tip: Use # for headings, ** for bold text, new lines for paragraphs
-                </p>
+                ></textarea>
               </div>
 
-              {/* Grid for Category, Date, Read Time, Author */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                {/* Category */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Category
+                  <label htmlFor="category" className="block text-gray-700 text-sm font-bold mb-2">
+                    Category <span className="text-red-500">*</span>
                   </label>
                   <select
+                    id="category"
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                    className="shadow border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-blue-500"
+                    required
                   >
                     {categories.map(cat => (
                       <option key={cat} value={cat}>{cat}</option>
                     ))}
                   </select>
                 </div>
-
-                {/* Read Time */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Read Time
+                  <label htmlFor="readTime" className="block text-gray-700 text-sm font-bold mb-2">
+                    Read Time (minutes) <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="text"
+                    type="number"
+                    id="readTime"
                     name="readTime"
                     value={formData.readTime}
                     onChange={handleChange}
-                    placeholder="e.g., 5 min read"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
-                  />
-                </div>
-
-                {/* Date */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date
-                  </label>
-                  <input
-                    type="text"
-                    name="date"
-                    value={formData.date}
-                    onChange={handleChange}
-                    placeholder="e.g., March 25, 2024"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
-                  />
-                </div>
-
-                {/* Author */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Author
-                  </label>
-                  <input
-                    type="text"
-                    name="author"
-                    value={formData.author}
-                    onChange={handleChange}
-                    placeholder="Author name"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                    className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g., 5"
+                    min="1"
+                    required
                   />
                 </div>
               </div>
 
-              {/* Image URL */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Image URL (Optional)
-                </label>
+                <label htmlFor="author" className="block text-gray-700 text-sm font-bold mb-2">Author</label>
+                <input
+                  type="text"
+                  id="author"
+                  name="author"
+                  value={formData.author}
+                  onChange={handleChange}
+                  className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., John Doe"
+                />
+              </div>
+
+              <div className="mb-6">
+                <label htmlFor="image" className="block text-gray-700 text-sm font-bold mb-2">Image URL (Optional)</label>
                 <input
                   type="url"
+                  id="image"
                   name="image"
                   value={formData.image}
                   onChange={handleChange}
-                  placeholder="https://images.unsplash.com/photo-..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300"
+                  className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., https://example.com/image.jpg"
                 />
-                <p className="text-xs text-gray-500 mt-2">
-                  Leave empty to use default image
-                </p>
               </div>
 
-              {/* Submit Button */}
-              <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={onBack}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
+              <div className="flex items-center justify-between">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-8 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg focus:outline-none focus:shadow-outline transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? 'Publishing...' : 'Publish Post'}
                 </button>
@@ -316,8 +261,8 @@ const AddBlogPage = ({ onBack }) => {
       <Footer />
     </div>
   );
-};
+});
+
+AddBlogPage.displayName = 'AddBlogPage';
 
 export default AddBlogPage;
-
-
