@@ -49,6 +49,13 @@ const CategoriesSection = memo(() => {
           <div className="w-24 h-1 bg-blue-500 mx-auto mt-4"></div>
         </div>
 
+        {categories.length === 0 ? (
+          <div className="text-center py-16 bg-gray-50 rounded-lg">
+            <div className="text-6xl mb-4">📂</div>
+            <p className="text-gray-600 text-lg mb-2">No categories yet</p>
+            <p className="text-gray-500">Categories will appear here once you add blog posts!</p>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           {categories.map((category) => (
             <button
@@ -85,6 +92,7 @@ const CategoriesSection = memo(() => {
             </button>
           ))}
         </div>
+        )}
       </div>
     </section>
   );

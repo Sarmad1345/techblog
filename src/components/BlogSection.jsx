@@ -37,6 +37,13 @@ const BlogSection = memo(() => {
           <div className="w-24 h-1 bg-blue-500 mx-auto mt-4"></div>
         </div>
 
+        {posts.length === 0 ? (
+          <div className="text-center py-16 bg-white rounded-lg shadow-md">
+            <div className="text-6xl mb-4">✍️</div>
+            <p className="text-gray-600 text-lg mb-2">No articles yet</p>
+            <p className="text-gray-500">Start writing your first blog post!</p>
+          </div>
+        ) : (
         <div className="space-y-6 mb-12">
           {currentPosts.map((post) => (
             <article
@@ -85,6 +92,7 @@ const BlogSection = memo(() => {
             </article>
           ))}
         </div>
+        )}
 
         {totalPages > 1 && (
           <div className="flex justify-center items-center space-x-2">

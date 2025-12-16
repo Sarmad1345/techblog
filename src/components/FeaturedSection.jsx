@@ -25,6 +25,13 @@ const FeaturedSection = memo(() => {
           <div className="w-24 h-1 bg-blue-500 mx-auto mt-4"></div>
         </div>
 
+        {featuredPosts.length === 0 ? (
+          <div className="text-center py-16 bg-gray-50 rounded-lg">
+            <div className="text-6xl mb-4">📝</div>
+            <p className="text-gray-600 text-lg mb-2">No posts yet</p>
+            <p className="text-gray-500">Add your first blog post to see it featured here!</p>
+          </div>
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {featuredPosts.map((post) => (
             <article
@@ -85,6 +92,7 @@ const FeaturedSection = memo(() => {
             </article>
           ))}
         </div>
+        )}
       </div>
     </section>
   );
