@@ -65,7 +65,11 @@ const BlogSection = memo(() => {
                   <img
                     src={post.image}
                     alt={post.title}
-                    className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-lg"
+                    className="w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-lg bg-gray-200"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&h=600&fit=crop';
+                    }}
                   />
                   <div className="flex-1">
                     <span className="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-semibold mb-2">

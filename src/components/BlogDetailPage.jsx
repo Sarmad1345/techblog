@@ -140,6 +140,10 @@ const BlogDetailPage = memo(({ postId, onBack }) => {
             src={post.image}
             alt={post.title}
             className="w-full h-full object-cover opacity-80"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&h=600&fit=crop';
+            }}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
           <div className="absolute bottom-0 left-0 right-0 p-8 text-white">

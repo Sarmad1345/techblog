@@ -203,11 +203,15 @@ const ContentSection = memo(() => {
                 key={post.id}
                 className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
               >
-                <div className="relative h-48 overflow-hidden">
+                <div className="relative h-48 overflow-hidden bg-gray-200">
                   <img
                     src={post.image}
                     alt={post.title}
                     className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&h=600&fit=crop';
+                    }}
                   />
                   <div className="absolute top-4 left-4">
                     <span className="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
@@ -278,7 +282,11 @@ const ContentSection = memo(() => {
                   <img
                     src={post.image}
                     alt={post.title}
-                    className="w-full sm:w-32 h-48 sm:h-32 object-cover rounded-lg"
+                    className="w-full sm:w-32 h-48 sm:h-32 object-cover rounded-lg bg-gray-200"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=800&h=600&fit=crop';
+                    }}
                   />
                   <div className="flex-1">
                     <span className="inline-block bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs font-semibold mb-2">

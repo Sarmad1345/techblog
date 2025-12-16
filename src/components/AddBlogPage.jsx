@@ -1,9 +1,60 @@
-import { memo, useState, useEffect, useMemo } from 'react';
+import { memo, useState, useEffect, useMemo, useRef } from 'react';
 import Header from './Header';
 import Footer from './Footer';
 import { useBlogStore, DEFAULT_CATEGORY } from '../stores/blogStore';
 import { useNavigationStore } from '../stores/navigationStore';
 import { useToastStore } from './Toast';
+
+// Image compression utility
+const compressImage = (file, maxWidth = 1200, quality = 0.8) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          // Calculate new dimensions while maintaining aspect ratio
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          
+          // Ensure minimum dimensions
+          width = Math.max(width, 1);
+          height = Math.max(height, 1);
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          // Fill with white background (for transparent images)
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Determine output format based on original file type
+          let outputType = 'image/jpeg';
+          if (file.type === 'image/png' && file.size < 500000) {
+            outputType = 'image/png'; // Keep PNG for small files
+          }
+          
+          const compressedBase64 = canvas.toDataURL(outputType, quality);
+          resolve(compressedBase64);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    reader.readAsDataURL(file);
+  });
+};
 
 const AddBlogPage = memo(({ onBack, editPostId = null }) => {
   const addPost = useBlogStore((state) => state.addPost);
@@ -33,6 +84,10 @@ const AddBlogPage = memo(({ onBack, editPostId = null }) => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [imagePreview, setImagePreview] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
   const [categoryMessage, setCategoryMessage] = useState({ type: '', text: '' });
   const [editingCategory, setEditingCategory] = useState(null);
   const [editCategoryName, setEditCategoryName] = useState('');
@@ -52,6 +107,10 @@ const AddBlogPage = memo(({ onBack, editPostId = null }) => {
         author: existingPost.author || 'TechBlog Team',
         image: existingPost.image || ''
       });
+      // Set image preview for existing post
+      if (existingPost.image) {
+        setImagePreview(existingPost.image);
+      }
     }
   }, [isEditMode, existingPost]);
 
@@ -132,6 +191,87 @@ const AddBlogPage = memo(({ onBack, editPostId = null }) => {
       ...prev,
       [name]: value
     }));
+  };
+
+  // Image upload handlers
+  const handleImageUpload = async (file) => {
+    if (!file) return;
+    
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type) && !file.type.startsWith('image/')) {
+      addToast('Please select a valid image file (JPG, PNG, GIF, WebP)', 'error');
+      return;
+    }
+    
+    // Validate file size (max 10MB before compression)
+    if (file.size > 10 * 1024 * 1024) {
+      addToast('Image size should be less than 10MB', 'error');
+      return;
+    }
+    
+    setIsUploadingImage(true);
+    
+    try {
+      // For small images, use directly without compression
+      if (file.size < 100000) { // Less than 100KB
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const base64 = e.target.result;
+          setFormData(prev => ({ ...prev, image: base64 }));
+          setImagePreview(base64);
+          addToast('📸 Image uploaded successfully!', 'success');
+          setIsUploadingImage(false);
+        };
+        reader.onerror = () => {
+          addToast('Failed to read image file', 'error');
+          setIsUploadingImage(false);
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
+      
+      // Compress larger images
+      const compressedImage = await compressImage(file);
+      setFormData(prev => ({ ...prev, image: compressedImage }));
+      setImagePreview(compressedImage);
+      addToast('📸 Image uploaded successfully!', 'success');
+    } catch (error) {
+      console.error('Error processing image:', error);
+      addToast('Failed to process image. Try a different image.', 'error');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) handleImageUpload(file);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleImageUpload(file);
+  };
+
+  const removeImage = () => {
+    setFormData(prev => ({ ...prev, image: '' }));
+    setImagePreview('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleSubmit = (e) => {
@@ -426,16 +566,102 @@ const AddBlogPage = memo(({ onBack, editPostId = null }) => {
                 />
               </div>
 
+              {/* Image Upload Section */}
               <div className="mb-6">
-                <label htmlFor="image" className="block text-gray-700 text-sm font-bold mb-2">Image URL (Optional)</label>
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  Cover Image (Optional)
+                </label>
+                
+                {/* Image Preview */}
+                {imagePreview ? (
+                  <div className="relative mb-4 rounded-lg overflow-hidden shadow-md bg-gray-100">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-full h-64 object-contain bg-gray-50"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5OTkiIHN0cm9rZS13aWR0aD0iMiI+PHJlY3QgeD0iMyIgeT0iMyIgd2lkdGg9IjE4IiBoZWlnaHQ9IjE4IiByeD0iMiIgcnk9IjIiLz48Y2lyY2xlIGN4PSI4LjUiIGN5PSI4LjUiIHI9IjEuNSIvPjxwb2x5bGluZSBwb2ludHM9IjIxIDE1IDE2IDEwIDUgMjEiLz48L3N2Zz4=';
+                        addToast('Image preview failed to load', 'warning');
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute top-3 right-3 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg hover:scale-110"
+                      title="Remove image"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    <div className="absolute bottom-0 left-0 right-0 px-4 py-3 bg-gradient-to-t from-black/70 to-transparent">
+                      <div className="flex items-center gap-2 text-white text-sm">
+                        <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        <span>Image ready</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  /* Drag & Drop Zone */
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`
+                      relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer
+                      transition-all duration-300 ease-out
+                      ${isDragging 
+                        ? 'border-blue-500 bg-blue-50 scale-[1.02]' 
+                        : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                      }
+                      ${isUploadingImage ? 'pointer-events-none opacity-60' : ''}
+                    `}
+                  >
+                    {isUploadingImage ? (
+                      <div className="flex flex-col items-center">
+                        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                        <p className="text-gray-600">Processing image...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex flex-col items-center">
+                          <div className={`p-4 rounded-full mb-4 transition-colors ${isDragging ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                            <svg 
+                              className={`w-10 h-10 transition-colors ${isDragging ? 'text-blue-500' : 'text-gray-400'}`} 
+                              fill="none" 
+                              stroke="currentColor" 
+                              viewBox="0 0 24 24"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                          <p className="text-gray-700 font-medium mb-1">
+                            {isDragging ? 'Drop your image here' : 'Drag & drop an image here'}
+                          </p>
+                          <p className="text-gray-500 text-sm mb-3">or</p>
+                          <span className="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium text-sm hover:bg-blue-600 transition-colors">
+                            Browse Files
+                          </span>
+                          <p className="text-gray-400 text-xs mt-3">
+                            Supports: JPG, PNG, GIF, WebP (Max 5MB)
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+                
+                {/* Hidden File Input */}
                 <input
-                  type="url"
-                  id="image"
-                  name="image"
-                  value={formData.image}
-                  onChange={handleChange}
-                  className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., https://example.com/image.jpg"
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileSelect}
+                  className="hidden"
                 />
               </div>
 
