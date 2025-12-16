@@ -4,18 +4,20 @@ import { persist } from 'zustand/middleware';
 // No default posts - only dynamically added posts will show
 const defaultBlogPosts = [];
 
+// Default category for posts without a category
+export const DEFAULT_CATEGORY = 'Uncategorized';
+
 // Blog Store with Zustand
 export const useBlogStore = create(
   persist(
     (set, get) => ({
-      // State - merge default posts with localStorage posts on init
+      // State - posts
       posts: (() => {
         try {
           const stored = localStorage.getItem('blog-storage');
           if (stored) {
             const parsed = JSON.parse(stored);
             if (parsed.state?.posts) {
-              // Merge: default posts + stored posts (avoid duplicates by ID)
               const storedIds = new Set(parsed.state.posts.map(p => p.id));
               const defaultOnly = defaultBlogPosts.filter(p => !storedIds.has(p.id));
               return [...parsed.state.posts, ...defaultOnly];
@@ -27,7 +29,35 @@ export const useBlogStore = create(
         return defaultBlogPosts;
       })(),
       
-      // Actions
+      // State - bookmarks (array of post IDs)
+      bookmarks: (() => {
+        try {
+          const stored = localStorage.getItem('blog-storage');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            return parsed.state?.bookmarks || [];
+          }
+        } catch (e) {
+          console.error('Error loading bookmarks from storage:', e);
+        }
+        return [];
+      })(),
+      
+      // State - custom categories (user-created categories)
+      customCategories: (() => {
+        try {
+          const stored = localStorage.getItem('blog-storage');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            return parsed.state?.customCategories || [];
+          }
+        } catch (e) {
+          console.error('Error loading custom categories from storage:', e);
+        }
+        return [];
+      })(),
+      
+      // Actions - Add Post
       addPost: (newPost) => {
         const posts = get().posts;
         const newId = Math.max(100, ...posts.map(p => p.id), 0) + 1;
@@ -37,7 +67,138 @@ export const useBlogStore = create(
           date: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
         };
         set({ posts: [postToAdd, ...posts] });
+        return newId;
+      },
+      
+      // Actions - Update Post
+      updatePost: (id, updatedData) => {
+        const posts = get().posts;
+        const postIndex = posts.findIndex(post => post.id === parseInt(id));
+        if (postIndex === -1) return false;
+        
+        const updatedPosts = [...posts];
+        updatedPosts[postIndex] = {
+          ...updatedPosts[postIndex],
+          ...updatedData,
+          id: parseInt(id), // Keep original ID
+          updatedAt: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        };
+        set({ posts: updatedPosts });
         return true;
+      },
+      
+      // Actions - Delete Post
+      deletePost: (id) => {
+        const posts = get().posts;
+        const bookmarks = get().bookmarks;
+        const filteredPosts = posts.filter(post => post.id !== parseInt(id));
+        const filteredBookmarks = bookmarks.filter(bookmarkId => bookmarkId !== parseInt(id));
+        set({ posts: filteredPosts, bookmarks: filteredBookmarks });
+        return true;
+      },
+      
+      // Actions - Toggle Bookmark
+      toggleBookmark: (id) => {
+        const bookmarks = get().bookmarks;
+        const postId = parseInt(id);
+        if (bookmarks.includes(postId)) {
+          set({ bookmarks: bookmarks.filter(b => b !== postId) });
+          return false; // Removed from bookmarks
+        } else {
+          set({ bookmarks: [...bookmarks, postId] });
+          return true; // Added to bookmarks
+        }
+      },
+      
+      // Actions - Add Custom Category
+      addCategory: (categoryName) => {
+        const trimmedName = categoryName.trim();
+        if (!trimmedName) return false;
+        
+        const customCategories = get().customCategories;
+        const posts = get().posts;
+        
+        // Check if category already exists (in custom categories or from posts)
+        const existingFromPosts = posts.map(p => p.category.toLowerCase());
+        const existingCustom = customCategories.map(c => c.toLowerCase());
+        
+        if (
+          trimmedName.toLowerCase() === DEFAULT_CATEGORY.toLowerCase() ||
+          existingFromPosts.includes(trimmedName.toLowerCase()) ||
+          existingCustom.includes(trimmedName.toLowerCase())
+        ) {
+          return false; // Category already exists
+        }
+        
+        set({ customCategories: [...customCategories, trimmedName] });
+        return true;
+      },
+      
+      // Actions - Update Custom Category (rename)
+      updateCategory: (oldName, newName) => {
+        const trimmedNewName = newName.trim();
+        if (!trimmedNewName || oldName === trimmedNewName) return false;
+        
+        const customCategories = get().customCategories;
+        const posts = get().posts;
+        
+        // Check if new name already exists
+        const existingFromPosts = posts.map(p => p.category.toLowerCase());
+        const existingCustom = customCategories.map(c => c.toLowerCase());
+        
+        if (
+          trimmedNewName.toLowerCase() === DEFAULT_CATEGORY.toLowerCase() ||
+          existingFromPosts.includes(trimmedNewName.toLowerCase()) ||
+          existingCustom.includes(trimmedNewName.toLowerCase())
+        ) {
+          return false; // Category already exists
+        }
+        
+        // Update custom categories
+        const updatedCustomCategories = customCategories.map(c => 
+          c === oldName ? trimmedNewName : c
+        );
+        
+        // Update all posts that use this category
+        const updatedPosts = posts.map(post => 
+          post.category === oldName 
+            ? { ...post, category: trimmedNewName }
+            : post
+        );
+        
+        set({ customCategories: updatedCustomCategories, posts: updatedPosts });
+        return true;
+      },
+      
+      // Actions - Delete Custom Category
+      deleteCategory: (categoryName) => {
+        const customCategories = get().customCategories;
+        const posts = get().posts;
+        
+        // Update posts with this category to DEFAULT_CATEGORY
+        const updatedPosts = posts.map(post => 
+          post.category === categoryName 
+            ? { ...post, category: DEFAULT_CATEGORY }
+            : post
+        );
+        
+        set({ 
+          customCategories: customCategories.filter(c => c !== categoryName),
+          posts: updatedPosts
+        });
+        return true;
+      },
+      
+      // Getters - Check if bookmarked
+      isBookmarked: (id) => {
+        return get().bookmarks.includes(parseInt(id));
+      },
+      
+      // Getters - Get all bookmarked posts
+      getBookmarkedPosts: () => {
+        const posts = get().posts;
+        const bookmarks = get().bookmarks;
+        return posts.filter(post => bookmarks.includes(post.id));
       },
       
       getPostById: (id) => {
@@ -53,14 +214,24 @@ export const useBlogStore = create(
       
       getAllCategories: () => {
         const posts = get().posts;
-        const categories = [...new Set(posts.map(post => post.category))];
-        return categories.map(cat => {
+        const customCategories = get().customCategories;
+        const categoriesFromPosts = [...new Set(posts.map(post => post.category))];
+        
+        // Combine categories from posts and custom categories
+        const combinedCategories = [...new Set([...categoriesFromPosts, ...customCategories])];
+        
+        // Always include DEFAULT_CATEGORY as an option
+        const allCategories = combinedCategories.includes(DEFAULT_CATEGORY) 
+          ? combinedCategories 
+          : [DEFAULT_CATEGORY, ...combinedCategories];
+        
+        return allCategories.map(cat => {
           const slug = cat.toLowerCase().replace(/\s+/g, '-');
-          const posts = get().getPostsByCategory(cat);
+          const catPosts = get().getPostsByCategory(cat);
           return {
             name: cat,
             slug,
-            count: posts.length
+            count: catPosts.length
           };
         });
       },
@@ -79,7 +250,7 @@ export const useBlogStore = create(
     }),
     {
       name: 'blog-storage',
-      partialize: (state) => ({ posts: state.posts }),
+      partialize: (state) => ({ posts: state.posts, bookmarks: state.bookmarks, customCategories: state.customCategories }),
     }
   )
 );

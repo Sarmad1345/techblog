@@ -1,4 +1,4 @@
-import { memo, useState, useMemo } from 'react';
+import { memo, useState, useMemo, useCallback } from 'react';
 import { useBlogStore } from '../stores/blogStore';
 import { useNavigationStore } from '../stores/navigationStore';
 
@@ -6,7 +6,11 @@ const BlogSection = memo(() => {
   const [currentPage, setCurrentPage] = useState(1);
   const postsPerPage = 6;
   const posts = useBlogStore((state) => state.posts);
+  const bookmarks = useBlogStore((state) => state.bookmarks);
+  const toggleBookmark = useBlogStore((state) => state.toggleBookmark);
   const navigate = useNavigationStore((state) => state.navigate);
+  
+  const [, forceUpdate] = useState({});
 
   const totalPages = useMemo(() => Math.ceil(posts.length / postsPerPage), [posts.length, postsPerPage]);
   const currentPosts = useMemo(() => {
@@ -23,6 +27,12 @@ const BlogSection = memo(() => {
   const handlePostClick = (postId) => {
     navigate('blog', { id: postId });
   };
+
+  const handleBookmarkClick = useCallback((e, postId) => {
+    e.stopPropagation();
+    toggleBookmark(postId);
+    forceUpdate({});
+  }, [toggleBookmark]);
 
   return (
     <section className="py-16 bg-gray-50" data-section="blog">
@@ -80,15 +90,42 @@ const BlogSection = memo(() => {
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => handlePostClick(post.id)}
-                className="inline-flex items-center text-blue-500 font-semibold hover:text-blue-600 transition-colors"
-              >
-                Read More
-                <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => handlePostClick(post.id)}
+                  className="inline-flex items-center text-blue-500 font-semibold hover:text-blue-600 transition-colors"
+                >
+                  Read More
+                  <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                {/* Bookmark Button */}
+                <button
+                  onClick={(e) => handleBookmarkClick(e, post.id)}
+                  className={`inline-flex items-center px-3 py-2 rounded-lg font-semibold transition-all duration-300 ${
+                    bookmarks.includes(post.id)
+                      ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                  title={bookmarks.includes(post.id) ? 'Remove from saved' : 'Save article'}
+                >
+                  <svg
+                    className="w-5 h-5 mr-1"
+                    fill={bookmarks.includes(post.id) ? 'currentColor' : 'none'}
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                    />
+                  </svg>
+                  {bookmarks.includes(post.id) ? 'Saved' : 'Save'}
+                </button>
+              </div>
             </article>
           ))}
         </div>

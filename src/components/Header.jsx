@@ -171,6 +171,7 @@ const Header = memo(() => {
           </nav>
 
           <div className="hidden md:flex items-center flex-shrink-0">
+            {/* Add Blog Button */}
             <button
               onClick={(e) => {
                 e.preventDefault();
@@ -259,6 +260,7 @@ const Header = memo(() => {
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0 lg:hidden">
+            {/* Add Blog - Mobile */}
             <button
               onClick={(e) => {
                 e.preventDefault();

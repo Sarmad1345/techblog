@@ -13,6 +13,9 @@ import BlogDetailPage from "./components/BlogDetailPage";
 import CategoryPage from "./components/CategoryPage";
 import SearchResultsPage from "./components/SearchResultsPage";
 import AddBlogPage from "./components/AddBlogPage";
+import BookmarksPage from "./components/BookmarksPage";
+import FloatingBookmarkButton from "./components/FloatingBookmarkButton";
+import ToastContainer from "./components/Toast";
 import { useNavigationStore } from "./stores/navigationStore";
 
 // Maintenance Page Component
@@ -85,6 +88,11 @@ function App() {
         const urlParams = new URLSearchParams(hash.split("?")[1]);
         const query = urlParams.get("q") || "";
         navigate("search", { query });
+      } else if (hash.startsWith("#/edit-blog/")) {
+        const id = hash.split("/").pop();
+        navigate("edit-blog", { id: parseInt(id) });
+      } else if (hash.startsWith("#/bookmarks")) {
+        navigate("bookmarks", {});
       } else if (hash.startsWith("#/add-blog")) {
         navigate("add-blog", {});
       } else {
@@ -104,6 +112,10 @@ function App() {
         newHash = `#/categories/${category}`;
       } else if (page === "search") {
         newHash = `#/search?q=${encodeURIComponent(query)}`;
+      } else if (page === "edit-blog") {
+        newHash = `#/edit-blog/${id}`;
+      } else if (page === "bookmarks") {
+        newHash = `#/bookmarks`;
       } else if (page === "add-blog") {
         newHash = `#/add-blog`;
       }
@@ -154,6 +166,14 @@ function App() {
       return <AddBlogPage onBack={goBack} />;
     }
 
+    if (currentPage === "edit-blog") {
+      return <AddBlogPage onBack={goBack} editPostId={pageData.id} />;
+    }
+
+    if (currentPage === "bookmarks") {
+      return <BookmarksPage onBack={goBack} />;
+    }
+
     // Home page
     return (
       <div className="min-h-screen bg-gray-50">
@@ -179,6 +199,8 @@ function App() {
       }`}
     >
       {renderPage()}
+      <FloatingBookmarkButton />
+      <ToastContainer />
     </div>
   );
 }

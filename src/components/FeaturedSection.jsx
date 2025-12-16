@@ -1,16 +1,26 @@
-import { memo, useMemo } from 'react';
+import { memo, useMemo, useState, useCallback } from 'react';
 import { useBlogStore } from '../stores/blogStore';
 import { useNavigationStore } from '../stores/navigationStore';
 
 const FeaturedSection = memo(() => {
   const posts = useBlogStore((state) => state.posts);
+  const bookmarks = useBlogStore((state) => state.bookmarks);
+  const toggleBookmark = useBlogStore((state) => state.toggleBookmark);
   const navigate = useNavigationStore((state) => state.navigate);
+  
+  const [, forceUpdate] = useState({});
 
   const featuredPosts = useMemo(() => posts.slice(0, 4), [posts]);
 
   const handlePostClick = (postId) => {
     navigate('blog', { id: postId });
   };
+
+  const handleBookmarkClick = useCallback((e, postId) => {
+    e.stopPropagation();
+    toggleBookmark(postId);
+    forceUpdate({});
+  }, [toggleBookmark]);
 
   return (
     <section className="py-16 bg-white">
@@ -50,6 +60,30 @@ const FeaturedSection = memo(() => {
                     {post.category}
                   </span>
                 </div>
+                {/* Bookmark Button */}
+                <button
+                  onClick={(e) => handleBookmarkClick(e, post.id)}
+                  className={`absolute top-4 right-4 p-2 rounded-full transition-all duration-300 ${
+                    bookmarks.includes(post.id)
+                      ? 'bg-yellow-400 text-yellow-900'
+                      : 'bg-white/80 text-gray-600 hover:bg-white'
+                  }`}
+                  title={bookmarks.includes(post.id) ? 'Remove from saved' : 'Save article'}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill={bookmarks.includes(post.id) ? 'currentColor' : 'none'}
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
+                    />
+                  </svg>
+                </button>
               </div>
 
               <div className="p-6">
