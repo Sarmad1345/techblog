@@ -1,8 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-
-// No default posts - only dynamically added posts will show
-const defaultBlogPosts = [];
+import { persist, createJSONStorage } from 'zustand/middleware';
 
 // Default category for posts without a category
 export const DEFAULT_CATEGORY = 'Uncategorized';
@@ -11,51 +8,14 @@ export const DEFAULT_CATEGORY = 'Uncategorized';
 export const useBlogStore = create(
   persist(
     (set, get) => ({
-      // State - posts
-      posts: (() => {
-        try {
-          const stored = localStorage.getItem('blog-storage');
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (parsed.state?.posts) {
-              const storedIds = new Set(parsed.state.posts.map(p => p.id));
-              const defaultOnly = defaultBlogPosts.filter(p => !storedIds.has(p.id));
-              return [...parsed.state.posts, ...defaultOnly];
-            }
-          }
-        } catch (e) {
-          console.error('Error loading posts from storage:', e);
-        }
-        return defaultBlogPosts;
-      })(),
+      // State - posts (empty by default, will be hydrated from localStorage)
+      posts: [],
       
       // State - bookmarks (array of post IDs)
-      bookmarks: (() => {
-        try {
-          const stored = localStorage.getItem('blog-storage');
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            return parsed.state?.bookmarks || [];
-          }
-        } catch (e) {
-          console.error('Error loading bookmarks from storage:', e);
-        }
-        return [];
-      })(),
+      bookmarks: [],
       
       // State - custom categories (user-created categories)
-      customCategories: (() => {
-        try {
-          const stored = localStorage.getItem('blog-storage');
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            return parsed.state?.customCategories || [];
-          }
-        } catch (e) {
-          console.error('Error loading custom categories from storage:', e);
-        }
-        return [];
-      })(),
+      customCategories: [],
       
       // Actions - Add Post
       addPost: (newPost) => {
@@ -250,7 +210,19 @@ export const useBlogStore = create(
     }),
     {
       name: 'blog-storage',
-      partialize: (state) => ({ posts: state.posts, bookmarks: state.bookmarks, customCategories: state.customCategories }),
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ 
+        posts: state.posts, 
+        bookmarks: state.bookmarks, 
+        customCategories: state.customCategories 
+      }),
+      onRehydrateStorage: () => (state, error) => {
+        if (error) {
+          console.error('Error rehydrating storage:', error);
+        } else {
+          console.log('Blog storage rehydrated successfully', state);
+        }
+      },
     }
   )
 );
